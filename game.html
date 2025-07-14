@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Game Page</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+   
+  <div class="container">
+    <h1 id="categoryTitle"></h1>
+    <div id="wordDisplay">Loading...</div>
+    <div class="video-buttons">
+        <video id="backBtn" class="nav-video" src="assets/back_fingers.mp4" autoplay muted loop playsinline
+        disablePictureInPicture
+        controlslist="nodownload nofullscreen noremoteplayback"></video>
+        <video id="nextBtn" class="nav-video" src="assets/front_fingers.mp4" autoplay muted loop autoplay muted loop playsinline
+        disablePictureInPicture ></video>
+      </div>
+    <div id="timer"></div>
+    <div id="timeoutMessage" style="color: red; display: none;">Time's up! Moving to next word.</div>
+  </div>
+
+  <script>
+    // Helper to get query param
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
+    const category = getQueryParam('category'); // "movies" or "words"
+    document.getElementById('categoryTitle').textContent = `${category}`;
+
+    const wordDisplay = document.getElementById('wordDisplay');
+    const timeoutMessage = document.getElementById('timeoutMessage');
+    const timerDisplay = document.getElementById('timer');
+
+    let words = [];
+    let currentIndex = 0;
+    let timerId;
+    const TIME_LIMIT = 5 * 60; // 5 minutes in seconds
+    let timeLeft = TIME_LIMIT;
+
+    // Fetch data from backend
+    fetch(`http://localhost:3000/${category}`)
+      .then(res => res.json())
+      .then(data => {
+        words = data;
+        showWord();
+        startTimer();
+      })
+      .catch(err => {
+        wordDisplay.textContent = 'Error loading data.';
+        console.error(err);
+      });
+
+    function showWord() {
+      if (words.length === 0) {
+        wordDisplay.textContent = 'No words found.';
+        return;
+      }
+      wordDisplay.textContent = words[currentIndex];
+      timeoutMessage.style.display = 'none';
+      resetTimer();
+    }
+
+    function nextWord() {
+      currentIndex = (currentIndex + 1) % words.length;
+      showWord();
+    }
+
+    function prevWord() {
+      currentIndex = (currentIndex - 1 + words.length) % words.length;
+      showWord();
+    }
+
+    
+    
+document.getElementById('nextBtn').addEventListener('click', nextWord);
+document.getElementById('backBtn').addEventListener('click', prevWord);
+
+
+    function startTimer() {
+      timeLeft = TIME_LIMIT;
+      timerDisplay.textContent = formatTime(timeLeft);
+
+      timerId = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = formatTime(timeLeft);
+
+        if (timeLeft <= 0) {
+          clearInterval(timerId);
+          timeoutMessage.style.display = 'block';
+          // Automatically move to next word after timeout
+          setTimeout(() => {
+            timeoutMessage.style.display = 'none';
+            nextWord();
+            startTimer();
+          }, 2000);
+        }
+      }, 1000);
+    }
+
+    function resetTimer() {
+      clearInterval(timerId);
+      startTimer();
+    }
+
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+  </script>
+</body>
+</html>

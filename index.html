@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Charades Game</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    
+  <div class="container">
+    <h1>Choose a category</h1>
+    <button id="moviesBtn">Movies</button>
+    <button id="wordsBtn">Words</button>
+  </div>
+
+  <script>
+    document.getElementById('moviesBtn').addEventListener('click', () => {
+      // Navigate to game.html with category=movies in URL query
+      window.location.href = 'game.html?category=movies';
+    });
+    document.getElementById('wordsBtn').addEventListener('click', () => {
+      window.location.href = 'game.html?category=words';
+    });
+  </script>
+</body>
+</html>
