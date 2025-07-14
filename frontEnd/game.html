@@ -73,9 +73,9 @@
       currentIndex = (currentIndex - 1 + words.length) % words.length;
       showWord();
     }
+document.getElementById('nextBtn').addEventListener('click', nextWord);
+document.getElementById('backBtn').addEventListener('click', prevWord);
 
-    document.getElementById('nextBtn').addEventListener('click', nextWord);
-    document.getElementById('prevBtn').addEventListener('click', prevWord);
     
 
 
