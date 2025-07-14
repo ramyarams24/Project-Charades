@@ -1,5 +1,5 @@
 body {
-    background-image: url('assets/background_video.png');
+    background-image: url('background_video.png');
     background-repeat: no-repeat;      /* Don’t tile the image */
     background-position: center center; /* Center the image */
     background-size: cover;            /* Scale image to cover the screen */
