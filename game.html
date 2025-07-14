@@ -42,7 +42,7 @@
     let timeLeft = TIME_LIMIT;
 
     // Fetch data from backend
-      fetch(`assets/${category}.json`)
+      fetch(`${category}.json`)
       .then(res => res.json())
       .then(data => {
         words = data;
