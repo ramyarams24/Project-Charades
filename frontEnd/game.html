@@ -1,116 +1,359 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Game Page</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-   
-  <div class="container">
-    <h1 id="categoryTitle"></h1>
-    <div id="wordDisplay">Loading...</div>
-    <div class="video-buttons">
-        <video id="backBtn" class="nav-video" src="assets/back_fingers.mp4" autoplay muted loop playsinline
-        disablePictureInPicture
-        controlslist="nodownload nofullscreen noremoteplayback"></video>
-        <video id="nextBtn" class="nav-video" src="assets/front_fingers.mp4" autoplay muted loop autoplay muted loop playsinline
-        disablePictureInPicture ></video>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Game Page</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+    <div class="container">
+      <h1 id="categoryTitle"></h1>
+      <div class="game-meta">
+        <div id="currentTurn" class="current-turn" aria-live="polite"></div>
+        <div id="scoreboard" class="scoreboard"></div>
       </div>
-    <div id="timer"></div>
-    <div id="timeoutMessage" style="color: red; display: none;">Time's up! Moving to next word.</div>
-  </div>
+      <div id="wordDisplay">Loading...</div>
+      <div class="timer-shell" aria-live="polite">
+        <div class="timer-circle" id="timerCircle" style="--progress: 1">
+          <svg class="timer-svg" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="timer-track" cx="60" cy="60" r="52"></circle>
+            <circle
+              class="timer-progress"
+              id="timerProgress"
+              cx="60"
+              cy="60"
+              r="52"
+            ></circle>
+          </svg>
+          <div class="timer-text-wrap">
+            <div id="timer" class="timer-text">1:00</div>
+            <span class="timer-label">time left</span>
+          </div>
+        </div>
+      </div>
+      <div class="game-controls">
+        <button
+          id="pauseResumeBtn"
+          class="pause-control"
+          type="button"
+          aria-pressed="false"
+        >
+          <span class="pause-control__icon" aria-hidden="true"></span>
+          <span class="pause-control__label">Pause</span>
+        </button>
+        <span id="pauseState" class="pause-state hidden">Paused</span>
+      </div>
+      <div class="video-buttons">
+        <video
+          id="backBtn"
+          class="nav-video"
+          src="assets/back_fingers.mp4"
+          autoplay
+          muted
+          loop
+          playsinline
+          disablePictureInPicture
+          controlslist="nodownload nofullscreen noremoteplayback"
+        ></video>
+        <video
+          id="nextBtn"
+          class="nav-video"
+          src="assets/front_fingers.mp4"
+          autoplay
+          muted
+          loop
+          autoplay
+          muted
+          loop
+          playsinline
+          disablePictureInPicture
+        ></video>
+      </div>
+    </div>
 
-  <script>
-    // Helper to get query param
-    function getQueryParam(param) {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get(param);
-    }
+    <div
+      id="guessModal"
+      class="guess-modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="guessTitle"
+    >
+      <div class="guess-modal-card">
+        <h2 id="guessTitle">Time's up</h2>
+        <p id="guessPrompt">Did the team guess this word correctly?</p>
+        <div class="guess-actions">
+          <button
+            id="guessCorrectBtn"
+            class="guess-btn guess-btn--correct"
+            type="button"
+          >
+            Correct!
+          </button>
+          <button
+            id="guessWrongBtn"
+            class="guess-btn guess-btn--wrong"
+            type="button"
+          >
+            Wrong
+          </button>
+        </div>
+      </div>
+    </div>
 
-    const category = getQueryParam('category'); // "movies" or "words"
-    document.getElementById('categoryTitle').textContent = `${category}`;
+    <script>
+      // Helper to get query param
+      function getQueryParam(param) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(param);
+      }
 
-    const wordDisplay = document.getElementById('wordDisplay');
-    const timeoutMessage = document.getElementById('timeoutMessage');
-    const timerDisplay = document.getElementById('timer');
+      const category = getQueryParam("category"); // "movies" or "words"
+      const prettyCategory = category
+        ? category.charAt(0).toUpperCase() + category.slice(1)
+        : "Charades";
+      document.getElementById("categoryTitle").textContent = prettyCategory;
 
-    let words = [];
-    let currentIndex = 0;
-    let timerId;
-    const TIME_LIMIT = 5 * 60; // 5 minutes in seconds
-    let timeLeft = TIME_LIMIT;
+      const wordDisplay = document.getElementById("wordDisplay");
+      const timerDisplay = document.getElementById("timer");
+      const timerCircle = document.getElementById("timerCircle");
+      const timerProgress = document.getElementById("timerProgress");
+      const pauseResumeBtn = document.getElementById("pauseResumeBtn");
+      const pauseState = document.getElementById("pauseState");
+      const nextBtn = document.getElementById("nextBtn");
+      const backBtn = document.getElementById("backBtn");
+      const guessModal = document.getElementById("guessModal");
+      const guessCorrectBtn = document.getElementById("guessCorrectBtn");
+      const guessWrongBtn = document.getElementById("guessWrongBtn");
+      const currentTurnEl = document.getElementById("currentTurn");
+      const scoreboardEl = document.getElementById("scoreboard");
+      const guessPrompt = document.getElementById("guessPrompt");
 
-    // Fetch data from backend
-    fetch(`http://localhost:3000/${category}`)
-      .then(res => res.json())
-      .then(data => {
-        words = data;
+      const SCORES_KEY = "charadesScores";
+      const TURN_KEY = "charadesCurrentTeam";
+
+      function loadTeamNames() {
+        try {
+          const raw = localStorage.getItem("charadesTeamNames");
+          if (raw) {
+            const names = JSON.parse(raw);
+            if (Array.isArray(names) && names.length > 0) return names;
+          }
+        } catch (e) {}
+        return ["Team 1", "Team 2"];
+      }
+
+      const teamNames = loadTeamNames();
+      let scores = teamNames.map(() => 0);
+      let currentTeamIndex = 0;
+
+      try {
+        const savedScores = localStorage.getItem(SCORES_KEY);
+        if (savedScores) {
+          const parsed = JSON.parse(savedScores);
+          if (Array.isArray(parsed) && parsed.length === teamNames.length) {
+            scores = parsed.map((n) => (Number.isFinite(n) ? n : 0));
+          }
+        }
+        const savedTurn = localStorage.getItem(TURN_KEY);
+        if (savedTurn !== null) {
+          const t = parseInt(savedTurn, 10);
+          if (!Number.isNaN(t) && t >= 0 && t < teamNames.length)
+            currentTeamIndex = t;
+        }
+      } catch (e) {}
+
+      function persistGameState() {
+        localStorage.setItem(SCORES_KEY, JSON.stringify(scores));
+        localStorage.setItem(TURN_KEY, String(currentTeamIndex));
+      }
+
+      function renderScoreboard() {
+        scoreboardEl.innerHTML = teamNames
+          .map(
+            (name, i) =>
+              `<div class="score-row${i === currentTeamIndex ? " score-row-active" : ""}"><span class="score-name">${name}</span><span class="score-val">${scores[i]}</span></div>`,
+          )
+          .join("");
+      }
+
+      function renderTurn() {
+        currentTurnEl.textContent = `Now playing: ${teamNames[currentTeamIndex]}`;
+      }
+
+      function refreshGameMeta() {
+        renderTurn();
+        renderScoreboard();
+      }
+
+      let words = [];
+      let currentIndex = 0;
+      let timerId;
+      let isPaused = false;
+      let isAwaitingGuess = false;
+
+      const TIMER_MINUTES_KEY = "charadesTimerMinutes";
+      function loadTimeLimitSeconds() {
+        let m = parseInt(localStorage.getItem(TIMER_MINUTES_KEY) || "1", 10);
+        if (!Number.isFinite(m)) m = 1;
+        return Math.min(10, Math.max(1, m)) * 60;
+      }
+      const TIME_LIMIT = loadTimeLimitSeconds();
+      let timeLeft = TIME_LIMIT;
+      const TIMER_RADIUS = 52;
+      const TIMER_CIRCUMFERENCE = 2 * Math.PI * TIMER_RADIUS;
+
+      function formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s.toString().padStart(2, "0")}`;
+      }
+
+      function updateTimerUI() {
+        const safeTime = Math.max(0, timeLeft);
+        const progress = TIME_LIMIT > 0 ? safeTime / TIME_LIMIT : 0;
+        const dashOffset = TIMER_CIRCUMFERENCE * (1 - progress);
+        const hue = 350 - progress * 130;
+
+        timerDisplay.textContent = formatTime(safeTime);
+        timerProgress.style.strokeDashoffset = `${dashOffset}`;
+        timerProgress.style.stroke = `hsl(${hue}, 94%, 66%)`;
+        timerCircle.style.setProperty("--progress", `${progress}`);
+      }
+
+      timerProgress.style.strokeDasharray = `${TIMER_CIRCUMFERENCE}`;
+      updateTimerUI();
+
+      refreshGameMeta();
+
+      // Fetch data from backend
+      fetch(`http://localhost:3000/${category}`)
+        .then((res) => res.json())
+        .then((data) => {
+          words = data;
+          showWord();
+        })
+        .catch((err) => {
+          wordDisplay.textContent = "Error loading data.";
+          console.error(err);
+        });
+
+      function showWord() {
+        if (words.length === 0) {
+          wordDisplay.textContent = "No words found.";
+          return;
+        }
+        wordDisplay.textContent = words[currentIndex];
+        isAwaitingGuess = false;
+        hideGuessModal();
+        refreshGameMeta();
+        resetTimer();
+      }
+
+      function advanceWordOnly() {
+        if (words.length === 0) return;
+        currentIndex = (currentIndex + 1) % words.length;
+      }
+
+      function nextWord() {
+        if (isPaused || isAwaitingGuess) return;
+        advanceWordOnly();
         showWord();
+      }
+
+      function prevWord() {
+        if (isPaused || isAwaitingGuess) return;
+        currentIndex = (currentIndex - 1 + words.length) % words.length;
+        showWord();
+      }
+      document.getElementById("nextBtn").addEventListener("click", nextWord);
+      document.getElementById("backBtn").addEventListener("click", prevWord);
+
+      function startTimer() {
+        clearInterval(timerId);
+        timeLeft = TIME_LIMIT;
+        updateTimerUI();
+
+        timerId = setInterval(() => {
+          if (isPaused) return;
+          timeLeft--;
+          updateTimerUI();
+
+          if (timeLeft <= 0) {
+            clearInterval(timerId);
+            isAwaitingGuess = true;
+            showGuessModal();
+          }
+        }, 1000);
+      }
+
+      function resetTimer() {
+        clearInterval(timerId);
+        isPaused = false;
+        applyPauseState();
         startTimer();
-      })
-      .catch(err => {
-        wordDisplay.textContent = 'Error loading data.';
-        console.error(err);
+      }
+
+      function applyPauseState() {
+        const lockInputs = isPaused || isAwaitingGuess;
+        pauseResumeBtn.classList.toggle("pause-control--paused", isPaused);
+        pauseResumeBtn.setAttribute(
+          "aria-pressed",
+          isPaused ? "true" : "false",
+        );
+        pauseResumeBtn.querySelector(".pause-control__label").textContent =
+          isPaused ? "Resume" : "Pause";
+        pauseState.classList.toggle("hidden", !isPaused);
+        pauseResumeBtn.disabled = isAwaitingGuess;
+        nextBtn.style.opacity = lockInputs ? "0.45" : "1";
+        backBtn.style.opacity = lockInputs ? "0.45" : "1";
+        nextBtn.style.pointerEvents = lockInputs ? "none" : "auto";
+        backBtn.style.pointerEvents = lockInputs ? "none" : "auto";
+      }
+
+      function showGuessModal() {
+        const name = teamNames[currentTeamIndex];
+        guessPrompt.textContent = `${name} — did they guess this word correctly?`;
+        guessModal.classList.remove("hidden");
+        applyPauseState();
+      }
+
+      function hideGuessModal() {
+        guessModal.classList.add("hidden");
+        applyPauseState();
+      }
+
+      pauseResumeBtn.addEventListener("click", () => {
+        isPaused = !isPaused;
+        applyPauseState();
       });
 
-    function showWord() {
-      if (words.length === 0) {
-        wordDisplay.textContent = 'No words found.';
-        return;
-      }
-      wordDisplay.textContent = words[currentIndex];
-      timeoutMessage.style.display = 'none';
-      resetTimer();
-    }
+      guessCorrectBtn.addEventListener("click", () => {
+        isAwaitingGuess = false;
+        hideGuessModal();
+        scores[currentTeamIndex] += 1;
+        currentTeamIndex = (currentTeamIndex + 1) % teamNames.length;
+        persistGameState();
+        advanceWordOnly();
+        showWord();
+      });
 
-    function nextWord() {
-      currentIndex = (currentIndex + 1) % words.length;
-      showWord();
-    }
-
-    function prevWord() {
-      currentIndex = (currentIndex - 1 + words.length) % words.length;
-      showWord();
-    }
-document.getElementById('nextBtn').addEventListener('click', nextWord);
-document.getElementById('backBtn').addEventListener('click', prevWord);
-
-    
-
-
-
-    function startTimer() {
-      timeLeft = TIME_LIMIT;
-      timerDisplay.textContent = formatTime(timeLeft);
-
-      timerId = setInterval(() => {
-        timeLeft--;
-        timerDisplay.textContent = formatTime(timeLeft);
-
-        if (timeLeft <= 0) {
-          clearInterval(timerId);
-          timeoutMessage.style.display = 'block';
-          // Automatically move to next word after timeout
-          setTimeout(() => {
-            timeoutMessage.style.display = 'none';
-            nextWord();
-            startTimer();
-          }, 2000);
-        }
-      }, 1000);
-    }
-
-    function resetTimer() {
-      clearInterval(timerId);
-      startTimer();
-    }
-
-    function formatTime(seconds) {
-      const m = Math.floor(seconds / 60);
-      const s = seconds % 60;
-      return `${m}:${s.toString().padStart(2, '0')}`;
-    }
-  </script>
-</body>
+      guessWrongBtn.addEventListener("click", () => {
+        isAwaitingGuess = false;
+        hideGuessModal();
+        currentTeamIndex = (currentTeamIndex + 1) % teamNames.length;
+        persistGameState();
+        advanceWordOnly();
+        showWord();
+      });
+    </script>
+  </body>
 </html>

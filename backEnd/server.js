@@ -1,10 +1,12 @@
 const express = require('express');
 const XLSX = require('xlsx');
 const cors = require('cors');
+const path = require('path');
 const app = express();
 const PORT = 3000;
 app.use(cors());
-const workbook = XLSX.readFile('./charades_data.xlsx');
+const workbookPath = path.join(__dirname, 'charades_data.xlsx');
+const workbook = XLSX.readFile(workbookPath);
 app.listen(PORT,()=>{console.log(`Server is running on http://localhost:${PORT}`)});
 function getFirstColumnData(sheetName)
 {

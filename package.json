@@ -1,0 +1,34 @@
+{
+  "name": "project-charades",
+  "version": "1.0.0",
+  "description": "Charades game with static frontend and Express backend.",
+  "main": "backEnd/server.js",
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "nodemon backEnd/server.js",
+    "dev:frontend": "http-server frontEnd -p 5500 -c-1",
+    "start": "node backEnd/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ramyarams24/Project-Charades.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ramyarams24/Project-Charades/issues"
+  },
+  "homepage": "https://github.com/ramyarams24/Project-Charades#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "http-server": "^14.1.1",
+    "nodemon": "^3.1.14"
+  }
+}

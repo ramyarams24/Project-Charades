@@ -2,25 +2,176 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Charades Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    
-  <div class="container">
-    <h1>Choose a category</h1>
-    <button id="moviesBtn">Movies</button>
-    <button id="wordsBtn">Words</button>
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  <div class="ambient-glow glow-3"></div>
+  <div class="setup-shell">
+    <div class="setup-header">
+      <div class="setup-hero-card">
+        <p class="eyebrow eyebrow--hero">Tonight</p>
+        <h1 class="hero-title">
+          <span class="hero-title__line">Charades Night</span>
+        </h1>
+        <p class="hero-tagline">Time to live, laugh, and make memories.</p>
+        <span class="hero-rule" aria-hidden="true"></span>
+        <p class="setup-subtitle">Add your teams, set the timer, then choose a category to start.</p>
+      </div>
+    </div>
+
+    <div class="step-indicator">
+      <span class="step active" id="step1Indicator">Team Setup</span>
+      <span class="step" id="step2Indicator">Pick Category</span>
+    </div>
+
+    <div class="container" id="setupStep">
+      <label class="field-label" for="teamCount">Number of Teams</label>
+      <select id="teamCount" class="input-control">
+        <option value="2">2 Teams</option>
+        <option value="3">3 Teams</option>
+        <option value="4">4 Teams</option>
+        <option value="5">5 Teams</option>
+        <option value="6">6 Teams</option>
+      </select>
+      <p class="field-hint">Tip: unique team names make score tracking easier later.</p>
+
+      <label class="field-label" for="timerMinutes">Time per round</label>
+      <select id="timerMinutes" class="input-control">
+        <option value="1">1 minute</option>
+        <option value="2">2 minutes</option>
+        <option value="3">3 minutes</option>
+        <option value="4">4 minutes</option>
+        <option value="5">5 minutes</option>
+        <option value="6">6 minutes</option>
+        <option value="7">7 minutes</option>
+        <option value="8">8 minutes</option>
+        <option value="9">9 minutes</option>
+        <option value="10">10 minutes</option>
+      </select>
+      <p class="field-hint">How long each team has to guess one word (1–10 minutes).</p>
+
+      <div id="teamsContainer" class="teams-grid"></div>
+      <p id="validationMessage" class="validation-message"></p>
+
+      <button id="continueBtn" class="primary-btn">Continue</button>
+    </div>
+
+    <div class="container hidden" id="categoryStep">
+      <h2>Choose a category</h2>
+      <div class="category-actions">
+        <button id="moviesBtn" class="category-btn category-btn--movies" type="button">Movies</button>
+        <button id="wordsBtn" class="category-btn category-btn--words" type="button">Words</button>
+      </div>
+      <button id="backToTeamsBtn" class="back-btn" type="button">Back to Teams</button>
+    </div>
   </div>
 
   <script>
-    document.getElementById('moviesBtn').addEventListener('click', () => {
-      // Navigate to game.html with category=movies in URL query
-      window.location.href = 'game.html?category=movies';
+    const teamCountEl = document.getElementById('teamCount');
+    const teamsContainer = document.getElementById('teamsContainer');
+    const validationMessage = document.getElementById('validationMessage');
+    const setupStep = document.getElementById('setupStep');
+    const categoryStep = document.getElementById('categoryStep');
+    const step1Indicator = document.getElementById('step1Indicator');
+    const step2Indicator = document.getElementById('step2Indicator');
+    const timerMinutesEl = document.getElementById('timerMinutes');
+
+    const TIMER_MINUTES_KEY = 'charadesTimerMinutes';
+    (function restoreTimerChoice() {
+      try {
+        const saved = localStorage.getItem(TIMER_MINUTES_KEY);
+        if (saved && timerMinutesEl.querySelector(`option[value="${saved}"]`)) {
+          timerMinutesEl.value = saved;
+        }
+      } catch (e) {}
+    })();
+
+    function renderTeamFields() {
+      const teamCount = Number(teamCountEl.value);
+      const previousNames = [...teamsContainer.querySelectorAll('input')].map((input) => input.value);
+      teamsContainer.innerHTML = '';
+
+      for (let i = 1; i <= teamCount; i++) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'team-card';
+        wrapper.innerHTML = `
+          <label class="field-label" for="teamName${i}">Team ${i}</label>
+          <input
+            id="teamName${i}"
+            class="input-control"
+            type="text"
+            maxlength="20"
+            placeholder="Enter Team ${i} name"
+            value="${previousNames[i - 1] || ''}"
+          />
+        `;
+        teamsContainer.appendChild(wrapper);
+      }
+    }
+
+    function getTeamNames() {
+      const inputs = [...teamsContainer.querySelectorAll('input')];
+      return inputs.map((input) => input.value.trim());
+    }
+
+    function validateTeams() {
+      const teamNames = getTeamNames();
+      const hasEmptyName = teamNames.some((name) => name.length === 0);
+      const hasDuplicates = new Set(teamNames.map((name) => name.toLowerCase())).size !== teamNames.length;
+
+      if (hasEmptyName) {
+        validationMessage.textContent = 'Please enter all team names.';
+        return false;
+      }
+      if (hasDuplicates) {
+        validationMessage.textContent = 'Team names must be unique.';
+        return false;
+      }
+
+      validationMessage.textContent = '';
+      localStorage.setItem('charadesTeamCount', String(teamNames.length));
+      localStorage.setItem('charadesTeamNames', JSON.stringify(teamNames));
+      return true;
+    }
+
+    teamCountEl.addEventListener('change', renderTeamFields);
+
+    document.getElementById('continueBtn').addEventListener('click', () => {
+      if (!validateTeams()) return;
+      setupStep.classList.add('hidden');
+      categoryStep.classList.remove('hidden');
+      step1Indicator.classList.remove('active');
+      step2Indicator.classList.add('active');
     });
-    document.getElementById('wordsBtn').addEventListener('click', () => {
-      window.location.href = 'game.html?category=words';
+
+    document.getElementById('backToTeamsBtn').addEventListener('click', () => {
+      categoryStep.classList.add('hidden');
+      setupStep.classList.remove('hidden');
+      step2Indicator.classList.remove('active');
+      step1Indicator.classList.add('active');
     });
+
+    function startGame(category) {
+      let m = parseInt(timerMinutesEl.value, 10);
+      if (!Number.isFinite(m)) m = 1;
+      m = Math.min(10, Math.max(1, m));
+      localStorage.setItem(TIMER_MINUTES_KEY, String(m));
+      localStorage.removeItem('charadesScores');
+      localStorage.setItem('charadesCurrentTeam', '0');
+      window.location.href = `game.html?category=${category}`;
+    }
+
+    document.getElementById('moviesBtn').addEventListener('click', () => startGame('movies'));
+    document.getElementById('wordsBtn').addEventListener('click', () => startGame('words'));
+
+    renderTeamFields();
   </script>
 </body>
 </html>
