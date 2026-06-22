@@ -22,7 +22,9 @@
     "start": "node backEnd/server.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "xlsx": "^0.18.5"
   },

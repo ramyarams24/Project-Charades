@@ -116,10 +116,28 @@
         return urlParams.get(param);
       }
 
-      const category = getQueryParam("category"); // "movies" or "words"
-      const prettyCategory = category
-        ? category.charAt(0).toUpperCase() + category.slice(1)
-        : "Charades";
+      const category = getQueryParam("category"); // "movies", "words" or "ai-movies"
+      const theme = getQueryParam("theme"); // only used for "ai-movies"
+      const isAiMovies = category === "ai-movies";
+
+      const THEME_LABELS = {
+        hollywood: "Hollywood",
+        bollywood: "Bollywood",
+        animated: "Animated",
+        classics: "80s & 90s",
+        action: "Action",
+        mixed: "Mixed",
+      };
+
+      let prettyCategory;
+      if (isAiMovies) {
+        const themeLabel = (theme && THEME_LABELS[theme]) || "Mixed";
+        prettyCategory = `AI Movies · ${themeLabel}`;
+      } else if (category) {
+        prettyCategory = category.charAt(0).toUpperCase() + category.slice(1);
+      } else {
+        prettyCategory = "Charades";
+      }
       document.getElementById("categoryTitle").textContent = prettyCategory;
 
       const wordDisplay = document.getElementById("wordDisplay");
@@ -235,9 +253,23 @@
       refreshGameMeta();
 
       // Fetch data from backend
-      fetch(`http://localhost:3000/${category}`)
+      let dataUrl;
+      if (isAiMovies) {
+        const t = theme || "mixed";
+        dataUrl = `http://localhost:3000/movies/ai?category=${encodeURIComponent(t)}`;
+        wordDisplay.textContent = "Generating movies with AI…";
+      } else {
+        dataUrl = `http://localhost:3000/${category}`;
+      }
+
+      fetch(dataUrl)
         .then((res) => res.json())
         .then((data) => {
+          if (!Array.isArray(data)) {
+            wordDisplay.textContent =
+              data && data.error ? data.error : "Error loading data.";
+            return;
+          }
           words = data;
           showWord();
         })

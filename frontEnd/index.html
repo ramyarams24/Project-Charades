@@ -65,9 +65,15 @@
 
     <div class="container hidden" id="categoryStep">
       <h2>Choose a category</h2>
-      <div class="category-actions">
+      <div class="category-actions" id="categoryActions">
         <button id="moviesBtn" class="category-btn category-btn--movies" type="button">Movies</button>
+        <button id="aiMoviesBtn" class="category-btn category-btn--ai" type="button">AI Movies</button>
         <button id="wordsBtn" class="category-btn category-btn--words" type="button">Words</button>
+      </div>
+      <div id="aiThemePanel" class="ai-theme-panel hidden">
+        <p class="field-hint">Pick a theme — titles are generated fresh by AI each round.</p>
+        <div id="aiThemeButtons" class="category-actions"></div>
+        <button id="backToCategoriesBtn" class="back-btn" type="button">Back to categories</button>
       </div>
       <button id="backToTeamsBtn" class="back-btn" type="button">Back to Teams</button>
     </div>
@@ -158,18 +164,71 @@
       step1Indicator.classList.add('active');
     });
 
-    function startGame(category) {
+    function startGame(category, theme) {
       let m = parseInt(timerMinutesEl.value, 10);
       if (!Number.isFinite(m)) m = 1;
       m = Math.min(10, Math.max(1, m));
       localStorage.setItem(TIMER_MINUTES_KEY, String(m));
       localStorage.removeItem('charadesScores');
       localStorage.setItem('charadesCurrentTeam', '0');
-      window.location.href = `game.html?category=${category}`;
+      let url = `game.html?category=${encodeURIComponent(category)}`;
+      if (theme) url += `&theme=${encodeURIComponent(theme)}`;
+      window.location.href = url;
     }
 
     document.getElementById('moviesBtn').addEventListener('click', () => startGame('movies'));
     document.getElementById('wordsBtn').addEventListener('click', () => startGame('words'));
+
+    // ---- AI Movies theme picker ----
+    const API_BASE = 'http://localhost:3000';
+    const THEME_LABELS = {
+      hollywood: 'Hollywood',
+      bollywood: 'Bollywood',
+      animated: 'Animated',
+      classics: '80s & 90s',
+      action: 'Action',
+      mixed: 'Mixed',
+    };
+    const categoryActions = document.getElementById('categoryActions');
+    const aiThemePanel = document.getElementById('aiThemePanel');
+    const aiThemeButtons = document.getElementById('aiThemeButtons');
+    let themesLoaded = false;
+
+    function renderThemeButtons(themeKeys) {
+      aiThemeButtons.innerHTML = '';
+      themeKeys.forEach((key) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'theme-btn';
+        btn.textContent = THEME_LABELS[key] || key;
+        btn.addEventListener('click', () => startGame('ai-movies', key));
+        aiThemeButtons.appendChild(btn);
+      });
+    }
+
+    function loadThemes() {
+      if (themesLoaded) return;
+      // Fall back to the known set if the endpoint is unreachable.
+      renderThemeButtons(Object.keys(THEME_LABELS));
+      fetch(`${API_BASE}/movies/ai/categories`)
+        .then((res) => res.json())
+        .then((keys) => {
+          if (Array.isArray(keys) && keys.length > 0) renderThemeButtons(keys);
+          themesLoaded = true;
+        })
+        .catch(() => { /* keep the fallback list */ });
+    }
+
+    document.getElementById('aiMoviesBtn').addEventListener('click', () => {
+      loadThemes();
+      categoryActions.classList.add('hidden');
+      aiThemePanel.classList.remove('hidden');
+    });
+
+    document.getElementById('backToCategoriesBtn').addEventListener('click', () => {
+      aiThemePanel.classList.add('hidden');
+      categoryActions.classList.remove('hidden');
+    });
 
     renderTeamFields();
   </script>
