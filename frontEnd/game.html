@@ -218,6 +218,13 @@
       let isPaused = false;
       let isAwaitingGuess = false;
 
+      // Endless mode (AI Movies only): fetch a fresh batch as we near the end
+      // so the game keeps serving new titles instead of looping the same 20.
+      const API_BASE = ""; // same origin — the Express server serves this page too
+      const PREFETCH_AT = 8; // start fetching when this many titles remain
+      let isFetchingMore = false;
+      let awaitingMore = false;
+
       const TIMER_MINUTES_KEY = "charadesTimerMinutes";
       function loadTimeLimitSeconds() {
         let m = parseInt(localStorage.getItem(TIMER_MINUTES_KEY) || "1", 10);
@@ -256,10 +263,10 @@
       let dataUrl;
       if (isAiMovies) {
         const t = theme || "mixed";
-        dataUrl = `http://localhost:3000/movies/ai?category=${encodeURIComponent(t)}`;
+        dataUrl = `${API_BASE}/movies/ai?category=${encodeURIComponent(t)}`;
         wordDisplay.textContent = "Generating movies with AI…";
       } else {
-        dataUrl = `http://localhost:3000/${category}`;
+        dataUrl = `${API_BASE}/${category}`;
       }
 
       fetch(dataUrl)
@@ -278,9 +285,52 @@
           console.error(err);
         });
 
+      // Fetch another AI batch (excluding titles already shown) and append it.
+      function maybePrefetch() {
+        if (!isAiMovies || isFetchingMore) return;
+        if (currentIndex < words.length - PREFETCH_AT) return;
+        isFetchingMore = true;
+        const params = new URLSearchParams();
+        params.set("category", theme || "mixed");
+        params.set("count", "20");
+        words.slice(-60).forEach((t) => params.append("exclude", t));
+        fetch(`${API_BASE}/movies/ai?${params.toString()}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (Array.isArray(data) && data.length > 0) {
+              const seen = new Set(words.map((w) => w.toLowerCase()));
+              const fresh = data.filter(
+                (t) =>
+                  typeof t === "string" &&
+                  t.trim() &&
+                  !seen.has(t.toLowerCase()),
+              );
+              words = words.concat(fresh);
+              // If the player had run past the buffer, show the next word now.
+              if (awaitingMore && currentIndex < words.length) {
+                awaitingMore = false;
+                showWord();
+              }
+            }
+          })
+          .catch(() => {
+            /* keep playing with what we have */
+          })
+          .finally(() => {
+            isFetchingMore = false;
+          });
+      }
+
       function showWord() {
         if (words.length === 0) {
           wordDisplay.textContent = "No words found.";
+          return;
+        }
+        // Endless mode: ran past the buffer before the next batch arrived.
+        if (isAiMovies && currentIndex >= words.length) {
+          awaitingMore = true;
+          wordDisplay.textContent = "Loading more movies…";
+          maybePrefetch();
           return;
         }
         wordDisplay.textContent = words[currentIndex];
@@ -288,11 +338,17 @@
         hideGuessModal();
         refreshGameMeta();
         resetTimer();
+        maybePrefetch();
       }
 
       function advanceWordOnly() {
         if (words.length === 0) return;
-        currentIndex = (currentIndex + 1) % words.length;
+        if (isAiMovies) {
+          // Endless: keep advancing; maybePrefetch() tops up the list.
+          currentIndex += 1;
+        } else {
+          currentIndex = (currentIndex + 1) % words.length;
+        }
       }
 
       function nextWord() {
@@ -303,7 +359,11 @@
 
       function prevWord() {
         if (isPaused || isAwaitingGuess) return;
-        currentIndex = (currentIndex - 1 + words.length) % words.length;
+        if (isAiMovies) {
+          currentIndex = Math.max(0, currentIndex - 1);
+        } else {
+          currentIndex = (currentIndex - 1 + words.length) % words.length;
+        }
         showWord();
       }
       document.getElementById("nextBtn").addEventListener("click", nextWord);

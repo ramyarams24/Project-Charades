@@ -16,10 +16,8 @@
   "type": "commonjs",
   "main": "backEnd/server.js",
   "scripts": {
-    "dev": "concurrently -k \"npm:dev:backend\" \"npm:dev:frontend\"",
-    "build": "concurrently -k \"npm:dev:backend\" \"npm:dev:frontend\"",
-    "dev:backend": "nodemon backEnd/server.js",
-    "dev:frontend": "http-server frontEnd -p 5500 -c-1",
+    "dev": "nodemon backEnd/server.js",
+    "build": "echo \"No build step required\"",
     "start": "node backEnd/server.js"
   },
   "dependencies": {
@@ -27,6 +25,7 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
