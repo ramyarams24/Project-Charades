@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reset Password · Charades Night</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  <div class="ambient-glow glow-3"></div>
+
+  <div class="setup-shell">
+    <div class="container" id="resetStep">
+      <h2>Choose a new password</h2>
+      <p class="field-hint">Enter a new password for your account.</p>
+      <label class="field-label" for="newPassword">New password</label>
+      <input id="newPassword" class="input-control" type="password" autocomplete="new-password" maxlength="100" placeholder="New password" />
+      <label class="field-label" for="confirmPassword">Confirm password</label>
+      <input id="confirmPassword" class="input-control" type="password" autocomplete="new-password" maxlength="100" placeholder="Re-enter password" />
+      <p id="resetMessage" class="validation-message"></p>
+      <button id="resetSubmitBtn" class="primary-btn" type="button">Reset password</button>
+      <a href="index.html" class="back-btn" style="display:inline-block;text-decoration:none">Back to log in</a>
+    </div>
+  </div>
+
+  <script>
+    const TOKEN_KEY = 'charadesToken';
+    const USER_KEY = 'charadesUser';
+    const GUEST_KEY = 'charadesGuest';
+
+    const params = new URLSearchParams(window.location.search);
+    const resetToken = params.get('token') || '';
+
+    const newPassword = document.getElementById('newPassword');
+    const confirmPassword = document.getElementById('confirmPassword');
+    const resetMessage = document.getElementById('resetMessage');
+    const resetSubmitBtn = document.getElementById('resetSubmitBtn');
+
+    if (!resetToken) {
+      resetMessage.textContent = 'This reset link is missing its token. Please request a new one.';
+      resetSubmitBtn.disabled = true;
+    }
+
+    async function submitReset() {
+      const password = newPassword.value;
+      resetMessage.textContent = '';
+      resetMessage.classList.remove('validation-message--success');
+
+      if (password.length < 6) { resetMessage.textContent = 'Password must be at least 6 characters.'; return; }
+      if (password !== confirmPassword.value) { resetMessage.textContent = 'Passwords do not match.'; return; }
+
+      resetSubmitBtn.disabled = true;
+      resetSubmitBtn.textContent = 'Resetting…';
+      try {
+        const res = await fetch('/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: resetToken, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) { resetMessage.textContent = data.error || 'Something went wrong.'; return; }
+        // Reset succeeded — the server logs us straight in.
+        localStorage.setItem(TOKEN_KEY, data.token);
+        localStorage.setItem(USER_KEY, data.username);
+        localStorage.removeItem(GUEST_KEY);
+        resetMessage.classList.add('validation-message--success');
+        resetMessage.textContent = 'Password updated! Redirecting…';
+        setTimeout(() => { window.location.href = 'index.html'; }, 1200);
+      } catch (err) {
+        resetMessage.textContent = 'Could not reach the server. Please try again.';
+      } finally {
+        if (!resetMessage.classList.contains('validation-message--success')) {
+          resetSubmitBtn.disabled = false;
+          resetSubmitBtn.textContent = 'Reset password';
+        }
+      }
+    }
+
+    resetSubmitBtn.addEventListener('click', submitReset);
+    [newPassword, confirmPassword].forEach((el) =>
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitReset(); }),
+    );
+  </script>
+</body>
+</html>

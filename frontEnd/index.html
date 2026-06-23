@@ -13,6 +13,19 @@
   <div class="ambient-glow glow-1"></div>
   <div class="ambient-glow glow-2"></div>
   <div class="ambient-glow glow-3"></div>
+
+  <div id="accountWidget" class="account-widget hidden">
+    <button id="accountAvatar" class="account-avatar" type="button" aria-haspopup="true" aria-expanded="false" title="Account">
+      <span id="avatarLetter">?</span>
+    </button>
+    <div id="accountMenu" class="account-menu hidden">
+      <p class="account-menu__caption">Signed in as</p>
+      <div class="account-menu__name" id="accountMenuName"></div>
+      <div class="account-menu__divider"></div>
+      <button id="logoutBtn" class="account-menu__logout" type="button">Log out</button>
+    </div>
+  </div>
+
   <div class="setup-shell">
     <div class="setup-header">
       <div class="setup-hero-card">
@@ -26,12 +39,46 @@
       </div>
     </div>
 
-    <div class="step-indicator">
+    <div class="container" id="authStep">
+      <h2>Welcome</h2>
+      <div class="auth-tabs">
+        <button id="loginTab" class="auth-tab active" type="button">Log in</button>
+        <button id="signupTab" class="auth-tab" type="button">Sign up</button>
+      </div>
+      <label class="field-label" for="authUsername">Username</label>
+      <input id="authUsername" class="input-control" type="text" autocomplete="username" maxlength="30" placeholder="Your username" />
+      <div id="authEmailWrap" class="hidden">
+        <label class="field-label" for="authEmail">Email</label>
+        <input id="authEmail" class="input-control" type="email" autocomplete="email" maxlength="120" placeholder="you@example.com" />
+      </div>
+      <label class="field-label" for="authPassword">Password</label>
+      <input id="authPassword" class="input-control" type="password" autocomplete="current-password" maxlength="100" placeholder="Your password" />
+      <div id="authConfirmWrap" class="hidden">
+        <label class="field-label" for="authConfirm">Confirm password</label>
+        <input id="authConfirm" class="input-control" type="password" autocomplete="new-password" maxlength="100" placeholder="Re-enter password" />
+      </div>
+      <p id="authMessage" class="validation-message"></p>
+      <button id="authSubmitBtn" class="primary-btn" type="button">Log in</button>
+      <button id="forgotLink" class="text-link" type="button">Forgot password?</button>
+      <button id="guestBtn" class="back-btn" type="button">Continue as guest</button>
+    </div>
+
+    <div class="container hidden" id="forgotStep">
+      <h2>Reset password</h2>
+      <p class="field-hint">Enter the email on your account and we'll send a reset link.</p>
+      <label class="field-label" for="forgotEmail">Email</label>
+      <input id="forgotEmail" class="input-control" type="email" autocomplete="email" maxlength="120" placeholder="you@example.com" />
+      <p id="forgotMessage" class="validation-message"></p>
+      <button id="forgotSubmitBtn" class="primary-btn" type="button">Send reset link</button>
+      <button id="backToLoginBtn" class="back-btn" type="button">Back to log in</button>
+    </div>
+
+    <div class="step-indicator hidden" id="stepIndicator">
       <span class="step active" id="step1Indicator">Team Setup</span>
       <span class="step" id="step2Indicator">Pick Category</span>
     </div>
 
-    <div class="container" id="setupStep">
+    <div class="container hidden" id="setupStep">
       <label class="field-label" for="teamCount">Number of Teams</label>
       <select id="teamCount" class="input-control">
         <option value="2">2 Teams</option>
@@ -80,6 +127,217 @@
   </div>
 
   <script>
+    // ===================== Authentication =====================
+    const AUTH_API = ''; // same origin
+    const TOKEN_KEY = 'charadesToken';
+    const USER_KEY = 'charadesUser';
+    const GUEST_KEY = 'charadesGuest';
+
+    const authStep = document.getElementById('authStep');
+    const stepIndicator = document.getElementById('stepIndicator');
+    const accountWidget = document.getElementById('accountWidget');
+    const accountAvatar = document.getElementById('accountAvatar');
+    const accountMenu = document.getElementById('accountMenu');
+    const avatarLetter = document.getElementById('avatarLetter');
+    const accountMenuName = document.getElementById('accountMenuName');
+    const loginTab = document.getElementById('loginTab');
+    const signupTab = document.getElementById('signupTab');
+    const authUsername = document.getElementById('authUsername');
+    const authEmailWrap = document.getElementById('authEmailWrap');
+    const authEmail = document.getElementById('authEmail');
+    const authPassword = document.getElementById('authPassword');
+    const authConfirmWrap = document.getElementById('authConfirmWrap');
+    const authConfirm = document.getElementById('authConfirm');
+    const authMessage = document.getElementById('authMessage');
+    const authSubmitBtn = document.getElementById('authSubmitBtn');
+    const guestBtn = document.getElementById('guestBtn');
+    const forgotLink = document.getElementById('forgotLink');
+    const forgotStep = document.getElementById('forgotStep');
+    const forgotEmail = document.getElementById('forgotEmail');
+    const forgotMessage = document.getElementById('forgotMessage');
+    const forgotSubmitBtn = document.getElementById('forgotSubmitBtn');
+
+    let authMode = 'login'; // 'login' | 'signup'
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      const isSignup = mode === 'signup';
+      loginTab.classList.toggle('active', !isSignup);
+      signupTab.classList.toggle('active', isSignup);
+      authEmailWrap.classList.toggle('hidden', !isSignup);
+      authConfirmWrap.classList.toggle('hidden', !isSignup);
+      authSubmitBtn.textContent = isSignup ? 'Sign up' : 'Log in';
+      // Forgot-password only makes sense when logging in.
+      forgotLink.classList.toggle('hidden', isSignup);
+      authPassword.setAttribute('autocomplete', isSignup ? 'new-password' : 'current-password');
+      authMessage.textContent = '';
+    }
+
+    function showAuthScreen() {
+      authStep.classList.remove('hidden');
+      forgotStep.classList.add('hidden');
+      accountWidget.classList.add('hidden');
+      accountMenu.classList.add('hidden');
+      stepIndicator.classList.add('hidden');
+      document.getElementById('setupStep').classList.add('hidden');
+      document.getElementById('categoryStep').classList.add('hidden');
+    }
+
+    function showForgotScreen() {
+      authStep.classList.add('hidden');
+      forgotStep.classList.remove('hidden');
+      forgotMessage.textContent = '';
+      forgotMessage.classList.remove('validation-message--success');
+      forgotEmail.value = '';
+    }
+
+    function showApp(name) {
+      const display = name || 'Guest';
+      authStep.classList.add('hidden');
+      forgotStep.classList.add('hidden');
+      accountWidget.classList.remove('hidden');
+      accountMenu.classList.add('hidden'); // start closed
+      avatarLetter.textContent = (display.charAt(0) || '?').toUpperCase();
+      accountMenuName.textContent = display === 'Guest' ? 'Playing as guest' : display;
+      stepIndicator.classList.remove('hidden');
+      document.getElementById('setupStep').classList.remove('hidden');
+    }
+
+    async function handleAuthSubmit() {
+      const username = authUsername.value.trim();
+      const email = authEmail.value.trim();
+      const password = authPassword.value;
+      authMessage.textContent = '';
+
+      if (username.length < 3) { authMessage.textContent = 'Username must be at least 3 characters.'; return; }
+      if (authMode === 'signup' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        authMessage.textContent = 'Please enter a valid email address.'; return;
+      }
+      if (password.length < 6) { authMessage.textContent = 'Password must be at least 6 characters.'; return; }
+      if (authMode === 'signup' && password !== authConfirm.value) {
+        authMessage.textContent = 'Passwords do not match.'; return;
+      }
+
+      authSubmitBtn.disabled = true;
+      authSubmitBtn.textContent = 'Please wait…';
+      try {
+        const res = await fetch(`${AUTH_API}/auth/${authMode}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) { authMessage.textContent = data.error || 'Something went wrong.'; return; }
+        localStorage.setItem(TOKEN_KEY, data.token);
+        localStorage.setItem(USER_KEY, data.username);
+        localStorage.removeItem(GUEST_KEY);
+        showApp(data.username);
+      } catch (err) {
+        authMessage.textContent = 'Could not reach the server. Please try again.';
+      } finally {
+        authSubmitBtn.disabled = false;
+        authSubmitBtn.textContent = authMode === 'signup' ? 'Sign up' : 'Log in';
+      }
+    }
+
+    function continueAsGuest() {
+      localStorage.setItem(GUEST_KEY, '1');
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      showApp('Guest');
+    }
+
+    function logout() {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      localStorage.removeItem(GUEST_KEY);
+      authUsername.value = '';
+      authEmail.value = '';
+      authPassword.value = '';
+      authConfirm.value = '';
+      setAuthMode('login');
+      showAuthScreen();
+    }
+
+    async function handleForgotSubmit() {
+      const email = forgotEmail.value.trim();
+      forgotMessage.textContent = '';
+      forgotMessage.classList.remove('validation-message--success');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        forgotMessage.textContent = 'Please enter a valid email address.'; return;
+      }
+      forgotSubmitBtn.disabled = true;
+      forgotSubmitBtn.textContent = 'Sending…';
+      try {
+        const res = await fetch(`${AUTH_API}/auth/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        if (!res.ok) { forgotMessage.textContent = data.error || 'Something went wrong.'; return; }
+        forgotMessage.classList.add('validation-message--success');
+        forgotMessage.textContent = data.message || 'Check your email for a reset link.';
+      } catch (err) {
+        forgotMessage.textContent = 'Could not reach the server. Please try again.';
+      } finally {
+        forgotSubmitBtn.disabled = false;
+        forgotSubmitBtn.textContent = 'Send reset link';
+      }
+    }
+
+    loginTab.addEventListener('click', () => setAuthMode('login'));
+    signupTab.addEventListener('click', () => setAuthMode('signup'));
+    authSubmitBtn.addEventListener('click', handleAuthSubmit);
+    guestBtn.addEventListener('click', continueAsGuest);
+    forgotLink.addEventListener('click', showForgotScreen);
+    forgotSubmitBtn.addEventListener('click', handleForgotSubmit);
+    document.getElementById('backToLoginBtn').addEventListener('click', () => {
+      forgotStep.classList.add('hidden');
+      authStep.classList.remove('hidden');
+    });
+    forgotEmail.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleForgotSubmit(); });
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    // Toggle the account menu when the avatar is clicked; stopPropagation so the
+    // document click handler below doesn't immediately close it again.
+    accountAvatar.addEventListener('click', (e) => {
+      e.stopPropagation();
+      accountMenu.classList.toggle('hidden');
+      const open = !accountMenu.classList.contains('hidden');
+      accountAvatar.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    // Click anywhere outside the widget closes the menu.
+    document.addEventListener('click', (e) => {
+      if (!accountWidget.contains(e.target)) accountMenu.classList.add('hidden');
+    });
+
+    [authUsername, authEmail, authPassword, authConfirm].forEach((el) =>
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuthSubmit(); }),
+    );
+
+    // Decide on load: valid token -> app; guest flag -> app; otherwise -> login.
+    (async function initAuth() {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (token) {
+        try {
+          const res = await fetch(`${AUTH_API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+          if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem(USER_KEY, data.username);
+            showApp(data.username);
+            return;
+          }
+        } catch (e) { /* fall through to login */ }
+        // token invalid/expired
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+      }
+      if (localStorage.getItem(GUEST_KEY)) { showApp('Guest'); return; }
+      showAuthScreen();
+    })();
+    // =================== End authentication ===================
+
     const teamCountEl = document.getElementById('teamCount');
     const teamsContainer = document.getElementById('teamsContainer');
     const validationMessage = document.getElementById('validationMessage');
