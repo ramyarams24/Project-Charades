@@ -5,12 +5,28 @@ const cors = require('cors');
 const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
 const rateLimit = require('express-rate-limit');
+const mongoose = require('mongoose');
+const authRouter = require('./auth');
 const app = express();
 const PORT = process.env.PORT || 3000; // hosts (Render, etc.) assign PORT
 // Trust the first proxy (Render/Heroku/etc.) so the rate limiter sees the real
 // client IP from X-Forwarded-For instead of lumping everyone under the proxy.
 app.set('trust proxy', 1);
 app.use(cors());
+app.use(express.json()); // parse JSON request bodies (needed for login/signup)
+
+// Connect to MongoDB for user accounts. Optional: if MONGODB_URI is not set,
+// the game and AI features still work; only login/signup are disabled.
+if (process.env.MONGODB_URI) {
+    mongoose
+        .connect(process.env.MONGODB_URI)
+        .then(() => console.log('Connected to MongoDB'))
+        .catch((err) => console.error('MongoDB connection error:', err.message));
+} else {
+    console.warn('MONGODB_URI not set — login/signup disabled (guest play still works).');
+}
+
+app.use('/auth', authRouter);
 
 // Rate limiter for the paid AI endpoint — protects your Anthropic credits from
 // abuse. Allows generous normal play but blocks anyone hammering the endpoint.

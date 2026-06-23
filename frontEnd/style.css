@@ -265,6 +265,28 @@ select.input-control option {
   margin: 12px 0 10px;
 }
 
+/* Green variant for success notices (e.g. "reset link sent"). */
+.validation-message--success {
+  color: #6ee7b7;
+}
+
+/* Subtle inline text button, e.g. "Forgot password?". */
+.text-link {
+  display: inline-block;
+  background: transparent;
+  border: none;
+  padding: 4px 2px;
+  margin: 2px 0 6px;
+  color: #fbbf24;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.text-link:hover {
+  color: #f59e0b;
+}
+
 button {
   font-size: 16px;
   padding: 12px 20px;
@@ -1005,5 +1027,184 @@ button {
   .hero-title {
     font-size: clamp(2rem, 9vw, 2.85rem);
   }
+}
+
+/* ===================== Authentication UI ===================== */
+.account-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 520px;
+  margin: 0 auto 14px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff8e7;
+  font-weight: 600;
+}
+
+.logout-btn {
+  font-family: var(--font-display);
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 12px;
+  cursor: pointer;
+  color: #ffe4e6;
+  background: linear-gradient(180deg, rgba(255, 120, 130, 0.35), rgba(180, 40, 55, 0.45));
+  border: 2px solid var(--game-red-mid);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.logout-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+#authStep {
+  text-align: center;
+}
+
+#authStep h2 {
+  margin-top: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 700;
+  color: #fff8e7;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 8px 0 20px;
+}
+
+.auth-tab {
+  font-family: var(--font-display);
+  flex: 1;
+  max-width: 160px;
+  padding: 10px 18px;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 14px;
+  cursor: pointer;
+  color: #fff8e7;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.auth-tab.active {
+  color: #0b1020;
+  background: linear-gradient(180deg, #c7d2fe 0%, #818cf8 50%, #6366f1 100%);
+  border-color: #3730a3;
+}
+
+.auth-tab:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+#authStep .field-label {
+  text-align: left;
+  display: block;
+}
+
+/* Utility hide must always win, regardless of where other display rules sit
+   in this file (otherwise later rules like .account-bar override it). */
+.hidden {
+  display: none !important;
+}
+
+/* Top-right account widget: avatar circle + dropdown menu */
+.account-widget {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+}
+
+.account-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #fff;
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 55%, #ea580c 100%);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.account-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.6);
+}
+
+.account-menu {
+  position: absolute;
+  top: 52px;
+  right: 0;
+  min-width: 168px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(17, 21, 36, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  text-align: left;
+}
+
+.account-menu__caption {
+  margin: 0 0 2px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 248, 231, 0.5);
+}
+
+.account-menu__name {
+  color: #fff8e7;
+  font-weight: 700;
+  font-size: 0.98rem;
+  word-break: break-word;
+}
+
+.account-menu__divider {
+  height: 1px;
+  margin: 10px 0;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.account-menu__logout {
+  width: 100%;
+  font-family: var(--font-body, inherit);
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fbbf24; /* amber */
+  background: transparent;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.account-menu__logout:hover {
+  background: #f59e0b; /* amber-500 */
+  color: #2a1c00; /* dark text for contrast on amber */
 }
   
